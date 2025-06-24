@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background-color: var(--bg);
+      color: var(--text);
+      transition: all 0.3s ease;
+    }
+
+    :root {
+      --bg: #ffffff;
+      --text: #000000;
+      --card: #f2f2f2;
+    }
+
+    .dark {
+      --bg: #121212;
+      --text: #ffffff;
+      --card: #1e1e1e;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .category-card {
+      background: var(--card);
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    button {
+      margin-left: 0.5rem;
+    }
+
+    .popup {
+      display: none;
+      position: fixed;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -30%);
+      background: var(--card);
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #00000080;
+    }
+
+    .popup input {
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+
+    .details, .report {
+      margin-top: 1rem;
+    }
+
+    select, input[type="date"] {
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <h2>Expense Tracker</h2>
+    <button onclick="toggleTheme()">Toggle Theme</button>
+  </div>
+
+  <div id="categories"></div>
+
+  <div class="details">
+    <h3>View Daily Expenses</h3>
+    <input type="date" id="datePicker" />
+    <div id="dailyView"></div>
+  </div>
+
+  <div class="report">
+    <h3>Download Monthly Report</h3>
+    <select id="monthSelect">
+      <script>
+        for(let m=0;m<12;m++) {
+          const date = new Date(2000, m, 1);
+          document.write(`<option value="${m+1}">${date.toLocaleString('default', { month: 'long' })}</option>`);
+        }
+      </script>
+    </select>
+    <select id="yearSelect">
+      <script>
+        const y = new Date().getFullYear();
+        for(let i = y - 5; i <= y; i++) {
+          document.write(`<option value="${i}">${i}</option>`);
+        }
+      </script>
+    </select>
+    <button onclick="downloadReport()">Download PDF</button>
+  </div>
+
+  <div class="popup" id="popup">
+    <h4 id="popupTitle"></h4>
+    <input type="number" id="amountInput" placeholder="Enter amount"/>
+    <div>
+      <button onclick="confirmAmount()">OK</button>
+      <button onclick="closePopup()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    const categories = ["Food", "Travel", "Study", "Shopping", "Misc"];
+    const categoryContainer = document.getElementById("categories");
+    const popup = document.getElementById("popup");
+    const amountInput = document.getElementById("amountInput");
+    const popupTitle = document.getElementById("popupTitle");
+
+    let currentCategory = "";
+    let action = "";
+
+    // Setup
+    function init() {
+      categories.forEach(cat => {
+        const div = document.createElement("div");
+        div.className = "category-card";
+        div.innerHTML = `
+          <div>${cat}</div>
+          <div>
+            <button onclick="showPopup('${cat}', 'add')">Add</button>
+            <button onclick="showPopup('${cat}', 'subtract')">Subtract</button>
+          </div>
+        `;
+        categoryContainer.appendChild(div);
+      });
+
+      document.getElementById("datePicker").valueAsDate = new Date();
+      document.getElementById("datePicker").addEventListener("change", showDailyView);
+      showDailyView();
+    }
+
+    function getTodayKey() {
+      const today = new Date();
+      return today.toISOString().split("T")[0];
+    }
+
+    function saveExpense(category, amount) {
+      const key = getTodayKey();
+      let data = JSON.parse(localStorage.getItem("expenses") || "{}");
+      if (!data[key]) data[key] = {};
+      if (!data[key][category]) data[key][category] = 0;
+      data[key][category] += amount;
+      localStorage.setItem("expenses", JSON.stringify(data));
+      showDailyView();
+    }
+
+    function showPopup(cat, act) {
+      currentCategory = cat;
+      action = act;
+      popupTitle.textContent = `${act === "add" ? "Add" : "Subtract"} amount for ${cat}`;
+      amountInput.value = "";
+      popup.style.display = "block";
+    }
+
+    function closePopup() {
+      popup.style.display = "none";
+    }
+
+    function confirmAmount() {
+      const amt = parseFloat(amountInput.value);
+      if (!isNaN(amt)) {
+        saveExpense(currentCategory, action === "add" ? amt : -amt);
+      }
+      closePopup();
+    }
+
+    function showDailyView() {
+      const date = document.getElementById("datePicker").value;
+      const view = document.getElementById("dailyView");
+      const data = JSON.parse(localStorage.getItem("expenses") || "{}");
+      view.innerHTML = "";
+      if (data[date]) {
+        Object.entries(data[date]).forEach(([cat, amt]) => {
+          view.innerHTML += `<p><strong>${cat}</strong>: ₹${amt.toFixed(2)}</p>`;
+        });
+      } else {
+        view.innerHTML = "<p>No data for selected date.</p>";
+      }
+    }
+
+    function downloadReport() {
+      const month = document.getElementById("monthSelect").value;
+      const year = document.getElementById("yearSelect").value;
+      const data = JSON.parse(localStorage.getItem("expenses") || "{}");
+
+      const monthlyTotals = {};
+      for (let date in data) {
+        const [y, m] = date.split("-");
+        if (parseInt(m) == month && y == year) {
+          for (let cat in data[date]) {
+            if (!monthlyTotals[cat]) monthlyTotals[cat] = 0;
+            monthlyTotals[cat] += data[date][cat];
+          }
+        }
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text(`Monthly Report - ${document.getElementById("monthSelect").selectedOptions[0].text} ${year}`, 10, 20);
+      doc.setFontSize(12);
+
+      let yPos = 40;
+      for (let cat of categories) {
+        const amt = monthlyTotals[cat] || 0;
+        doc.text(`${cat}: ₹${amt.toFixed(2)}`, 10, yPos);
+        yPos += 10;
+      }
+
+      doc.save(`Expense_Report_${month}_${year}.pdf`);
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+
+    init();
+  </script>
+</body>
+</html>
