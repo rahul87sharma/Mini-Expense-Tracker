@@ -2,7 +2,7 @@
 A lightweight, super fast, and minimalist expense tracking tool — no signups, no logins, just you and your browser.
 Track your daily and monthly expenses easily with a clutter-free interface and seamless user experience.
 
-🔗 Live Demo: Mini Expense Tracker
+🔗 Live Demo: https://rahul87sharma.github.io/Mini-Expense-Tracker/
 
 ✨ Features
 ⚡ Blazing Fast: Loads instantly — no waiting, no lags.
@@ -31,7 +31,7 @@ Most finance apps demand sign-ups or send your data to the cloud. This tool resp
 ✅ Designed to be simple, effective, and clutter-free.
 
 🌟 Make It Even More Accessible
-To access the Mini Expense Tracker more easily, consider using my Custom Browser Homepage.
+To access the Mini Expense Tracker more easily, consider using my Custom Browser Homepage (https://rahul87sharma.github.io/Custom-Homepage/).
 It lets you add personal shortcuts — including one for this expense tracker — right on your new tab page!
 
 📌 Pro Tip: Pin the tracker as a tile on your custom homepage for one-click access every day.
